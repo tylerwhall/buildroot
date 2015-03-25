@@ -1,0 +1,52 @@
+From 9036b1fee25a114edd42df39f6bba294b6ba1cca Mon Sep 17 00:00:00 2001
+From: Tyler Hall <tylerwhall@gmail.com>
+Date: Thu, 19 Feb 2015 21:38:49 -0500
+Subject: [PATCH] ARM: move exidx after data
+
+When placed between .text and .data, elf2flt gets confused and sets the
+start of data at the start of exidx. This causes the kernel to think
+this section is full of bogus GOT entries, since the GOT is at the start
+of .data.
+---
+ elf2flt.ld.in | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/elf2flt.ld.in b/elf2flt.ld.in
+index 788ff37..66e37e1 100644
+--- a/elf2flt.ld.in
++++ b/elf2flt.ld.in
+@@ -44,15 +44,6 @@ W_RODAT		*(.gnu.linkonce.r*)
+ 		*(.call_table_text)
+ 	} > flatmem :text
+ 
+-	/* .ARM.exidx name sections containing index entries for section unwinding */
+-	/* .ARM.exidx is sorted, so has to go in its own output section.  */
+-	@SYMBOL_PREFIX@__exidx_start = .;
+-	.ARM.exidx :
+-	{
+-		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+-	} > flatmem
+-	@SYMBOL_PREFIX@__exidx_end = .;
+-
+ 	. = ALIGN(0x20) ;
+ 	@SYMBOL_PREFIX@_etext = . ;
+ 
+@@ -147,6 +138,15 @@ TOR:		@SYMBOL_PREFIX@__DTOR_END__ = .;
+ 		PROVIDE (@SYMBOL_PREFIX@__fini_array_end = .);
+ 	} > flatmem :data
+ 
++	/* .ARM.exidx name sections containing index entries for section unwinding */
++	/* .ARM.exidx is sorted, so has to go in its own output section.  */
++	@SYMBOL_PREFIX@__exidx_start = .;
++	.ARM.exidx :
++	{
++		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
++	} > flatmem
++	@SYMBOL_PREFIX@__exidx_end = .;
++
+ 	.note.ABI-tag : { *(.note.ABI-tag) } > flatmem
+ 	.eh_frame_hdr : { *(.eh_frame_hdr) } > flatmem
+ 	.eh_frame : { KEEP(*(.eh_frame)) } > flatmem
+-- 
+2.3.0
+
